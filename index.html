@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>www.ksvictorx.com.br</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#93a3b8;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box;font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#071021 0%,#071827 60%);color:#e6eef6;min-height:100vh;transition:background 0.5s ease;position:relative;}
+    header{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);backdrop-filter:blur(4px)}
+    header h1{margin:0;font-size:18px}
+    .logout-btn{display:none;background:#072233;border:1px solid rgba(255,255,255,0.05);padding:6px 12px;border-radius:8px;color:#e6eef6;cursor:pointer;font-size:13px;}
+    .container{padding:20px;max-width:1100px;margin:0 auto}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+    .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03)}
+    .thumb{width:100%;height:140px;border-radius:8px;object-fit:cover;background:#06121b}
+    .title{font-weight:600;margin:8px 0 4px}
+    .price{color:var(--accent);font-weight:700}
+    .btn-row{display:flex;gap:8px;margin-top:10px}
+    .btn{flex:1;padding:8px 10px;border-radius:8px;text-align:center;cursor:pointer;background:#072233;border:1px solid rgba(255,255,255,0.03)}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#7dd3fc);color:#022c33;font-weight:700}
+    .admin{margin-top:20px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .small{font-size:12px;color:var(--muted)}
+    footer{padding:14px 20px;text-align:center;color:var(--muted);font-size:13px}
+    @media (max-width:600px){.thumb{height:120px}}
+    .login-panel{max-width:400px;margin:30px auto;background:var(--card);padding:20px;border-radius:12px;text-align:center}
+    .counter{margin-top:10px;font-size:13px;color:var(--muted)}
+    #adminLoginToggle{position:fixed;bottom:10px;left:10px;background:#072233;border:1px solid rgba(255,255,255,0.05);border-radius:50%;width:36px;height:36px;color:#e6eef6;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9999;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>www.ksvictorx.com.br — Catálogo de Produtos</h1>
+    <button id="logoutBtn" class="logout-btn">Sair</button>
+  </header>
+
+  <button id="adminLoginToggle">⚙️</button>
+
+  <div class="container">
+    <div id="loginArea" class="login-panel" style="display:none">
+      <h3>Login do Administrador</h3>
+      <input id="adminUser" placeholder="Usuário" /><br><br>
+      <input id="adminPass" type="password" placeholder="Senha" /><br><br>
+      <button id="loginBtn" class="btn primary">Entrar</button>
+      <div id="loginMsg" class="small"></div>
+    </div>
+
+    <div id="itemsArea" class="grid"></div>
+
+    <div class="admin" id="adminPanel" style="display:none">
+      <h3>Área de administração</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Nome do produto</label><input id="titleInput" placeholder="ex: Fone Bluetooth X" /></div>
+        <div><label>Preço (opcional)</label><input id="priceInput" placeholder="R$ 199,90" /></div>
+      </div>
+      <div style="margin-top:10px">
+        <label>Imagem (URL)</label>
+        <input id="imageInput" placeholder="https://...jpg" />
+      </div>
+      <div style="margin-top:10px">
+        <label>URL de compra</label>
+        <input id="urlInput" placeholder="https://loja.com/produto-123" />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="addBtn" class="btn primary">Adicionar / Atualizar</button>
+        <button id="clearBtn" class="btn">Limpar tudo</button>
+      </div>
+      <div style="margin-top:12px">
+        <label>Alterar imagem de fundo</label>
+        <input id="bgImageInput" placeholder="URL da imagem de fundo" />
+        <button id="bgChangeBtn" class="btn">Aplicar fundo</button>
+      </div>
+      <div class="counter"><span id="viewCount"></span> | <span id="clickCount"></span></div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 www.ksvictorx.com.br — Todos os direitos reservados.
+  </footer>
+
+<script>
+(async function(){
+  const API = "api.php";
+  const ADMIN_USER = "ksvictorx";
+  const ADMIN_PASS = "Vi@261195";
+  const viewCount = document.getElementById('viewCount');
+  const clickCount = document.getElementById('clickCount');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const adminToggle = document.getElementById('adminLoginToggle');
+  const itemsArea = document.getElementById('itemsArea');
+  const adminPanel = document.getElementById('adminPanel');
+  const loginArea = document.getElementById('loginArea');
+  let counters = JSON.parse(localStorage.getItem("counters")||'{"views":0,"clicks":0}');
+  let editing = null;
+  let data = {itens:[]};
+
+  // Carregar produtos do servidor
+  async function loadData(){
+    const res = await fetch(API);
+    data = await res.json();
+    renderItems();
+  }
+
+  // Salvar produtos no servidor
+  async function saveData(){
+    await fetch(API, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({user:ADMIN_USER, pass:ADMIN_PASS, itens:data.itens})
+    });
+  }
+
+  function renderCounters(){
+    viewCount.textContent = `Visualizações: ${counters.views}`;
+    clickCount.textContent = `Cliques em produtos: ${counters.clicks}`;
+  }
+
+  function renderItems(){
+    const isAdmin = localStorage.getItem("admin") === "1";
+    itemsArea.innerHTML = "";
+    if (!data.itens.length){ itemsArea.innerHTML = "<div class='small'>Nenhum produto cadastrado.</div>"; return; }
+    data.itens.forEach((it, idx)=>{
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<img class='thumb' src='${it.image||""}'/><div class='title'>${it.title}</div><div class='price'>${it.price||""}</div>`;
+      const row = document.createElement("div");
+      row.className = "btn-row";
+      const buy = document.createElement("a");
+      buy.className = "btn primary";
+      buy.textContent = "Comprar";
+      buy.href = it.url;
+      buy.target = "_blank";
+      buy.onclick = ()=>{counters.clicks++; localStorage.setItem("counters",JSON.stringify(counters)); renderCounters();};
+      row.appendChild(buy);
+      if(isAdmin){
+        const edit=document.createElement("button");
+        edit.className="btn";
+        edit.textContent="Editar";
+        edit.onclick=()=>fillForm(idx);
+        const del=document.createElement("button");
+        del.className="btn";
+        del.textContent="Excluir";
+        del.onclick=()=>{if(confirm("Excluir este item?")){data.itens.splice(idx,1);saveData();renderItems();}};
+        row.append(edit,del);
+      }
+      card.appendChild(row);
+      itemsArea.appendChild(card);
+    });
+  }
+
+  function fillForm(idx){
+    const it=data.itens[idx];
+    document.getElementById("titleInput").value=it.title||"";
+    document.getElementById("priceInput").value=it.price||"";
+    document.getElementById("imageInput").value=it.image||"";
+    document.getElementById("urlInput").value=it.url||"";
+    editing=idx;
+  }
+
+  document.getElementById("addBtn").onclick=()=>{
+    const t=document.getElementById("titleInput").value.trim();
+    const p=document.getElementById("priceInput").value.trim();
+    const i=document.getElementById("imageInput").value.trim();
+    const u=document.getElementById("urlInput").value.trim();
+    if(!t||!u){alert("Preencha título e URL!");return;}
+    const item={title:t,price:p,image:i,url:u};
+    if(editing!==null){data.itens[editing]=item;editing=null;}else{data.itens.push(item);}
+    saveData();renderItems();
+    document.getElementById("titleInput").value=document.getElementById("priceInput").value=document.getElementById("imageInput").value=document.getElementById("urlInput").value="";
+  };
+
+  document.getElementById("clearBtn").onclick=()=>{if(confirm("Apagar todo o catálogo?")){data.itens=[];saveData();renderItems();}};
+  document.getElementById("bgChangeBtn").onclick=()=>{const bg=document.getElementById("bgImageInput").value.trim();if(bg){document.body.style.background=`url('${bg}') no-repeat center center / cover`;localStorage.setItem("bg",bg);}};
+  const savedBg=localStorage.getItem("bg");if(savedBg){document.body.style.background=`url('${savedBg}') no-repeat center center / cover`;};
+
+  adminToggle.onclick=()=>{if(localStorage.getItem("admin")==="1")return;loginArea.style.display=loginArea.style.display==="none"?"block":"none";};
+  document.getElementById("loginBtn").onclick=()=>{const u=document.getElementById("adminUser").value;const p=document.getElementById("adminPass").value;if(u===ADMIN_USER&&p===ADMIN_PASS){localStorage.setItem("admin","1");loginArea.style.display="none";adminPanel.style.display="block";logoutBtn.style.display="inline-block";renderItems();}else{document.getElementById("loginMsg").textContent="Usuário ou senha incorretos";}};
+  logoutBtn.onclick=()=>{localStorage.removeItem("admin");adminPanel.style.display="none";logoutBtn.style.display="none";renderItems();};
+
+  counters.views++; localStorage.setItem("counters",JSON.stringify(counters));
+  renderCounters();
+  await loadData();
+})();
+</script>
+</body>
+</html>
